@@ -1,0 +1,39 @@
+# Serwer LLM: Fedora + Podman + RTX 5070. Sama Ollama z modelem gemma4-docrag, udostępniona w sieci lokalnej.
+# docrag (np. laptop z compose.podman-3050.yml) łączy się z http://<IP tego komputera>:11434
+#
+# Raz, przed pierwszym startem (sterownik NVIDIA >= 570 w wersji open + nvidia-container-toolkit):
+#   sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+#   sudo firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source address=192.168.10.0/24 port port=11434 protocol=tcp accept'
+#   sudo firewall-cmd --reload
+#
+# Start i model:
+#   podman compose -f compose.ollama-fedora.yml up -d
+#   podman exec ollama ollama pull hf.co/ggml-org/gemma-4-E4B-it-GGUF:Q8_0
+#   podman exec ollama ollama create gemma4-docrag -f /config/Modelfile.gemma4
+#   podman exec ollama ollama ps                      # po pierwszym pytaniu: PROCESSOR = 100% GPU
+#
+# Start po restarcie bez logowania: sudo loginctl enable-linger $USER
+#                                   systemctl --user enable --now podman-restart.service
+name: docrag-llm
+
+services:
+  ollama:
+    image: docker.io/ollama/ollama:0.40.4      # ta sama wersja co na Windows (renderer/parser gemma4)
+    container_name: ollama
+    restart: always
+    ports:
+      - "11434:11434"                          # w obrazie OLLAMA_HOST=0.0.0.0 - słucha na całej sieci
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m                   # model zostaje w VRAM 30 min po ostatnim pytaniu
+      OLLAMA_NUM_PARALLEL: 1                   # jedno pytanie naraz - przewidywalne VRAM i czas
+      OLLAMA_MAX_LOADED_MODELS: 1
+    devices:
+      - nvidia.com/gpu=all                     # CDI
+    security_opt:
+      - label=disable                          # SELinux: dostęp kontenera do urządzeń GPU
+    volumes:
+      - ollama-models:/root/.ollama            # pobrane modele (~5 GB dla gemma4-docrag)
+      - ./Modelfile.gemma4:/config/Modelfile.gemma4:ro,Z
+
+volumes:
+  ollama-models:

@@ -1,0 +1,73 @@
+qdrant:
+  url: http://localhost:6333     # np. http://v2:6333
+  api_key: null                  # ustaw, jeśli Qdrant ma QDRANT__SERVICE__API_KEY
+  collection: docs
+  upsert_batch: 64
+
+embedding:
+  backend: bge-m3                # bge-m3 | sentence-transformers
+  model: BAAI/bge-m3
+  device: cuda:0
+  use_fp16: true                 # RTX 5070 (sm_120): fp16 i bf16 działają
+  batch_size: 16
+  max_length: 8192
+  passage_prefix: ""
+
+chunking:
+  max_tokens: 700
+  min_tokens: 80
+  overlap_sentences: 1
+  parent_max_tokens: 4000
+  use_model_tokenizer: true
+
+legal:
+  skip_repealed: true            # artykuły "(uchylony)" nie trafiają do bazy
+  drop_footnotes: true           # przypisy ISAP (historia nowelizacji) są odrzucane
+
+defaults:
+  doc_type: dokument
+  acl: [all]                     # domyślnie widoczne dla wszystkich
+
+search:
+  prefetch_limit: 40             # kandydaci z każdego wektora (dense, sparse) przed fuzją RRF
+  rerank_candidates: 40          # ile wyników fuzji ocenia reranker
+  top_k: 5                       # ile źródeł (artykułów/sekcji) zwraca wyszukiwanie
+  reranker: bge                  # bge | none
+  reranker_model: BAAI/bge-reranker-v2-m3
+  reranker_device: cuda:0
+  reranker_fp16: true
+  reranker_batch_size: 16
+  reranker_max_length: 1024
+  min_score: 0.0                 # próg wyniku rerankera 0-1 (np. 0.1 odcina słabe trafienia); 0 = brak
+  expand_parents: true           # fragment długiego artykułu -> cały artykuł w kontekście
+  max_refs: 3                    # artykuły przywołane w źródłach, dociągane jako pomocnicze
+  context_max_tokens: 6000       # budżet tokenów na źródła w prompcie (num_ctx LLM musi być większy)
+
+llm:
+  backend: ollama                # none | ollama  (none: `docrag ask` pokazuje prompt bez wywołania modelu)
+  url: http://localhost:11434
+  model: gemma4-docrag           # Gemma 4 E4B-it Q8_0 z Modelfile.gemma4 (ok. 5 GB VRAM)
+  temperature: 0.1
+  num_ctx: 8192
+  num_predict: 1024               # limit długości odpowiedzi
+  think: false                   # tryb myślenia Gemmy: 3-5x wolniej, bez poprawy odpowiedzi
+  timeout: 300
+
+api:
+  # local:  logowanie loginem i hasłem; konta zakłada admin: docrag user add <login> [--admin]
+  # header: użytkownik/grupy AD z nagłówków od reverse proxy (IIS/nginx + Kerberos/OIDC);
+  #         wtedy API wystawiaj tylko przez proxy, inaczej nagłówki da się podrobić
+  # none:   bez logowania - każdy widzi tylko dokumenty z acl "all" i nie może wgrywać
+  auth: local
+  user_header: X-Remote-User
+  groups_header: X-Remote-Groups
+  groups_separator: ","
+  admin_users: []                # tryb header: loginy administratorów
+  db_path: state/docrag.db           # SQLite: użytkownicy, sesje, rejestr dokumentów
+  upload_dir: state/uploads          # wgrane pliki (podkatalog na użytkownika)
+  max_upload_mb: 50
+  session_hours: 168             # ważność logowania (7 dni)
+  cookie_secure: false           # true, gdy serwer jest za HTTPS
+  cors_origins: []               # np. [http://localhost:5173] dla frontendu w trybie dev
+  max_question_chars: 2000
+  warmup: true

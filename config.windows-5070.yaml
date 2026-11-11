@@ -1,0 +1,79 @@
+# Windows: Docker Desktop, RTX 5070 (compose.windows-5070.yml). Różnice względem config.yaml:
+#  - Qdrant pod nazwą usługi z compose (qdrant), nie localhost,
+#  - Ollama na Windows (poza kontenerem): host.docker.internal,
+#  - ścieżki SQLite i plików w /app/state (wolumen ./state).
+# Plik jest montowany do kontenera: zmiana = docker compose -f compose.windows-5070.yml restart docrag.
+
+qdrant:
+  url: http://qdrant:6333
+  api_key: null
+  collection: docs
+  upsert_batch: 64
+
+embedding:
+  backend: bge-m3
+  model: BAAI/bge-m3
+  device: cuda:0
+  use_fp16: true                 # RTX 5070 (sm_120, Blackwell): fp16 i bf16 działają
+  batch_size: 16
+  max_length: 8192
+  passage_prefix: ""
+
+chunking:
+  max_tokens: 700
+  min_tokens: 80
+  overlap_sentences: 1
+  parent_max_tokens: 4000
+  use_model_tokenizer: true
+
+legal:
+  skip_repealed: true
+  drop_footnotes: true
+
+defaults:
+  doc_type: dokument
+  acl: [all]
+
+search:
+  prefetch_limit: 40
+  rerank_candidates: 40          # mniej = szybciej (reranker to ~90% czasu zapytania)
+  top_k: 5
+  reranker: bge                  # none = bez rerankera (oszczędza ok. 1,1 GB VRAM)
+  reranker_model: BAAI/bge-reranker-v2-m3
+  reranker_device: cuda:0
+  reranker_fp16: true
+  reranker_batch_size: 16
+  reranker_max_length: 1024
+  min_score: 0.0
+  expand_parents: true
+  max_refs: 3
+  context_max_tokens: 6000
+
+llm:
+  backend: ollama                # none | ollama  (none: `docrag ask` pokazuje prompt bez wywołania modelu)
+  url: http://host.docker.internal:11434    # Ollama na hoście, widziana z kontenera
+  model: gemma4-docrag           # Gemma 4 E4B-it Q8_0 z Modelfile.gemma4 (ok. 5 GB VRAM)
+  temperature: 0.1
+  num_ctx: 8192
+  num_predict: 1024               # limit długości odpowiedzi
+  think: false                   # tryb myślenia Gemmy: 3-5x wolniej, bez poprawy odpowiedzi
+  timeout: 300
+
+api:
+  # local:  logowanie loginem i hasłem; konta zakłada admin: docrag user add <login> [--admin]
+  # header: użytkownik/grupy AD z nagłówków od reverse proxy (IIS/nginx + Kerberos/OIDC);
+  #         wtedy API wystawiaj tylko przez proxy, inaczej nagłówki da się podrobić
+  # none:   bez logowania - każdy widzi tylko dokumenty z acl "all" i nie może wgrywać
+  auth: local
+  user_header: X-Remote-User
+  groups_header: X-Remote-Groups
+  groups_separator: ","
+  admin_users: []                # tryb header: loginy administratorów
+  db_path: /app/state/docrag.db           # SQLite: użytkownicy, sesje, rejestr dokumentów
+  upload_dir: /app/state/uploads          # wgrane pliki (podkatalog na użytkownika)
+  max_upload_mb: 50
+  session_hours: 168             # ważność logowania (7 dni)
+  cookie_secure: false           # true, gdy serwer jest za HTTPS
+  cors_origins: []               # np. [http://localhost:5173] dla frontendu w trybie dev
+  max_question_chars: 2000
+  warmup: true

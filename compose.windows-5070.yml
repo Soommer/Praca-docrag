@@ -1,0 +1,49 @@
+# Windows: Docker Desktop (WSL 2), RTX 5070 (12 GB VRAM). Qdrant + docrag (API, frontend, modele na GPU).
+# LLM: Ollama zainstalowana na Windows (poza kontenerem) - config.windows-5070.yaml, sekcja llm.
+# Konfiguracja: config.windows-5070.yaml  (laptop z Fedorą i Podmanem: compose.podman-3050.yml)
+#
+#   docker compose -f compose.windows-5070.yml up -d --build      # -> http://localhost:8008
+#   docker compose -f compose.windows-5070.yml logs -f docrag
+#   docker compose -f compose.windows-5070.yml run --rm docrag docrag ingest data/
+#   docker compose -f compose.windows-5070.yml exec docrag docrag user add admin --admin   # pierwsze konto
+#
+# Zastępuje samodzielnego Qdranta z docker-compose.qdrant.yml (kontener in-qdrant-1): oba używają
+# ./qdrant_storage i portu 6333, więc przed pierwszym startem: docker stop in-qdrant-1
+name: docrag
+
+services:
+  qdrant:
+    image: docker.io/qdrant/qdrant:v1.19.2   # ta sama wersja co przy tworzeniu qdrant_storage
+    restart: unless-stopped                  # startuje razem z Docker Desktop
+    ports:
+      - "6333:6333"                          # REST + dashboard (http://localhost:6333/dashboard)
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+
+  docrag:
+    build: .
+    image: docrag:latest
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+    ports:
+      - "8008:8008"                          # frontend + API
+    environment:
+      DOCRAG_CONFIG: /app/config.yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Ollama na Windows (Docker Desktop zwykle ustawia to sam)
+    volumes:
+      - ./config.windows-5070.yaml:/app/config.yaml:ro
+      - ./data:/app/data:ro                  # dokumenty do ingestu przez CLI
+      - ./state:/app/state                   # SQLite (użytkownicy, sesje) + pliki wgrane przez stronę
+      - hf-cache:/models                     # modele BGE-M3 i reranker (~4,6 GB, pobierane raz)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  hf-cache:

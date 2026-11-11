@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>docrag</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>docrag</h1>
+      <span id="status" class="status">sprawdzam połączenie…</span>
+      <span id="account" class="account" hidden>
+        <span id="whoami"></span>
+        <button id="logout" type="button" class="link">Wyloguj</button>
+      </span>
+    </header>
+
+    <!-- logowanie -->
+    <section id="login-view" hidden>
+      <form id="login-form" class="card login">
+        <h2>Logowanie</h2>
+        <label>Login <input id="login-user" autocomplete="username" required></label>
+        <label>Hasło <input id="login-pass" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Zaloguj</button>
+        <p id="login-error" class="error" hidden></p>
+      </form>
+    </section>
+
+    <section id="app-view" hidden>
+      <nav class="tabs">
+        <button type="button" class="tab active" data-tab="ask-tab">Pytania</button>
+        <button type="button" class="tab" data-tab="docs-tab" id="docs-tab-button">Dokumenty</button>
+      </nav>
+
+      <!-- pytania -->
+      <div id="ask-tab" class="tab-panel">
+        <form id="ask-form">
+          <textarea id="question" rows="3" maxlength="2000" required
+                    placeholder="Zadaj pytanie, np. Ile mam czasu na wniesienie apelacji?"></textarea>
+          <div class="form-row">
+            <span class="hint">Enter wysyła, Shift+Enter nowa linia</span>
+            <button id="submit" type="submit">Zapytaj</button>
+          </div>
+        </form>
+
+        <p id="error" class="error" hidden></p>
+
+        <section id="result" hidden>
+          <h2>Odpowiedź</h2>
+          <div id="answer" class="answer"></div>
+          <p id="stats" class="stats"></p>
+
+          <h2>Źródła</h2>
+          <ol id="sources" class="sources"></ol>
+        </section>
+      </div>
+
+      <!-- dokumenty -->
+      <div id="docs-tab" class="tab-panel" hidden>
+        <form id="upload-form" class="card">
+          <h2>Wgraj dokument</h2>
+          <input id="upload-file" type="file" required
+                 accept=".pdf,.docx,.pptx,.html,.htm,.xlsx,.txt,.md,.markdown">
+          <input id="upload-title" placeholder="Tytuł (opcjonalnie - inaczej z treści lub nazwy pliku)">
+          <label class="check"><input id="upload-public" type="checkbox">
+            Udostępnij wszystkim (domyślnie widzisz go tylko Ty)</label>
+          <div class="form-row">
+            <span class="hint">PDF, DOCX, PPTX, HTML, XLSX, TXT, MD</span>
+            <button id="upload-submit" type="submit">Wgraj</button>
+          </div>
+          <p id="upload-error" class="error" hidden></p>
+        </form>
+
+        <h2 id="docs-heading">Moje dokumenty</h2>
+        <div class="table-wrap">
+          <table id="docs-table">
+            <thead>
+              <tr>
+                <th>Dokument</th>
+                <th class="admin-only">Właściciel</th>
+                <th>Widoczność</th>
+                <th>Status</th>
+                <th>Dodano</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="docs-body"></tbody>
+          </table>
+        </div>
+        <p id="docs-empty" class="meta" hidden>Nie masz jeszcze żadnych dokumentów.</p>
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

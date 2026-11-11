@@ -1,0 +1,16 @@
+# Model odpowiedzi dla docrag: Gemma 4 E4B (wersja instrukcyjna -it), Q8_0, na Ollamie.
+#
+#   ollama pull hf.co/ggml-org/gemma-4-E4B-it-GGUF:Q8_0
+#   ollama create gemma4-docrag -f Modelfile.gemma4
+#
+# Model z Hugging Face nie ma formatu czatu (szablon {{ .Prompt }}) - bez RENDERER/PARSER
+# prompt systemowy nie trafia do modelu. Wersja bazowa (gemma-4-E4B-GGUF, bez -it) nie wykonuje
+# poleceń, tylko dopisuje tekst - do RAG się nie nadaje.
+# Tryb myślenia wyłącza docrag (llm.think: false w configu).
+FROM hf.co/ggml-org/gemma-4-E4B-it-GGUF:Q8_0
+RENDERER gemma4
+PARSER gemma4
+PARAMETER temperature 0.1
+PARAMETER top_k 64
+PARAMETER top_p 0.95
+PARAMETER num_ctx 8192
